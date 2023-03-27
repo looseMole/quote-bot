@@ -1,5 +1,6 @@
 package com.loosemole.quotebot;
 
+import com.loosemole.quotebot.listeners.EventListener;
 import io.github.cdimascio.dotenv.Dotenv;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
@@ -12,7 +13,7 @@ public class QuoteBot {
         this.config = Dotenv.configure().load();
         String token = config.get("TOKEN");
 
-        JDA api = JDABuilder.createDefault(token).build(); // Actually Run the bot.
+        JDA api = JDABuilder.createDefault(token).addEventListeners(new EventListener()).build(); // Actually Run the bot.
         api.getPresence().setActivity(Activity.listening("Interesting Quotes"));
     }
 
