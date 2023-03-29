@@ -1,3 +1,4 @@
 /quote-bot/.env
+/quote-bot/*Quotes.txt
 .idea
 quote-bot/target
