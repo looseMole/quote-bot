@@ -1,19 +1,22 @@
 package com.loosemole.quotebot.listeners;
 
 import java.io.Serializable;
+import java.time.OffsetDateTime;
 
 public class Quote implements Serializable {
     private String quote;
     private String source;
+    private String messageId;
     private String description = "";
 
-    public Quote(String quote, String source) {
+    public Quote(String quote, String source, String messageId) {
         this.quote = quote;
         this.source = source;
+        this.messageId = messageId;
     }
 
-    public Quote(String quote, String source, String description) {
-        this(quote, source);
+    public Quote(String quote, String source, String messageId, String description) {
+        this(quote, source, messageId);
         this.description = description;
     }
 
@@ -49,5 +52,13 @@ public class Quote implements Serializable {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getMessageId() {
+        return messageId;
+    }
+
+    public void setMessageId(String messageId) {
+        this.messageId = messageId;
     }
 }

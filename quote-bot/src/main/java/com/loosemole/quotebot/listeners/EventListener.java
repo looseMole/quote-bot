@@ -6,11 +6,14 @@ import net.dv8tion.jda.api.entities.MessageHistory;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
 import net.dv8tion.jda.api.events.guild.GuildReadyEvent;
+import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.internal.requests.Route;
 
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -38,18 +41,47 @@ public class EventListener extends ListenerAdapter implements Serializable {
         }
 
         quotes = this.load_quotes(guild);
-        if(quotes != null) {
+
+        if(quotes == null) {
+            // Get all previously sent messages of the Quotes Channel
+            quotes = this.get_all_sent_quotes(quotesChannel);
 //            OffsetDateTime mtime = message.getTimeCreated(); // Method for getting time sent on a quote.
-            for(Quote q : quotes) {
-                System.out.println(q);
-            }
-            return; // Right now assumes that no messages has been sent since the bot was last online.
         } else {
-            quotes = new ArrayList<>();
+            String latestQuoteId = quotes.get(0).getMessageId();
+            quotes.addAll(this.get_quotes_since(quotesChannel, latestQuoteId));
         }
 
-        // Get all previously sent messages of the Quotes Channel
-        MessageHistory messageHistory = MessageHistory.getHistoryFromBeginning(quotesChannel).complete();
+        this.save_quotes(guild, quotes);
+//        // Debug:
+//        for(Quote q : quotes) {
+//            System.out.println(q);
+//        }
+//        quotesChannel.sendMessage(quotes.size() + " quotes ||loaded||!").queue();
+    }
+
+    // Return an ArrayList containing all quotes send since the list was last updated.
+    private ArrayList<Quote> get_all_sent_quotes(TextChannel quotesChannel) {
+        return get_quotes_since(quotesChannel, null);
+    }
+
+    private ArrayList<Quote> get_quotes_since(TextChannel quotesChannel, String latestMessageId) {
+        ArrayList<Quote> quotes = new ArrayList<>();
+        MessageHistory messageHistory;
+
+        if(latestMessageId == null) {
+            messageHistory = MessageHistory.getHistoryFromBeginning(quotesChannel).complete();
+        } else {
+            Message latestMessage;
+            try {
+                latestMessage = quotesChannel.retrieveMessageById(latestMessageId).complete();
+            } catch(ErrorResponseException e) {
+                System.out.println("The latest saved quote did not exist.");
+                return null; // TODO: Handle MessageNotFoundError more gracefully, potentially by trying with the next-oldest saved quote.
+            }
+
+            messageHistory = MessageHistory.getHistoryAfter(quotesChannel, latestMessage.getId()).complete();
+        }
+
         List<Message> messages = messageHistory.getRetrievedHistory();
 
         // Identify "Correctly formatted messages"
@@ -71,6 +103,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
 
 
             message = messages.get(i).getContentDisplay();
+            String messageId = messages.get(i).getId();
             messageLetters = message.toCharArray();
 
             if(message.isEmpty()) {
@@ -136,21 +169,15 @@ public class EventListener extends ListenerAdapter implements Serializable {
                 descStartIndex = sourceEndIndex + 1;
                 String d =  new String(Arrays.copyOfRange(messageLetters, descStartIndex, messageLetters.length));
 
-                Quote q = new Quote(m, s, d.trim());
+                Quote q = new Quote(m, s, messageId, d.trim());
                 quotes.add(q);
             } else {
-                Quote q = new Quote(m, s);
+                Quote q = new Quote(m, s, messageId);
                 quotes.add(q);
             }
         }
 
-        this.save_quotes(guild, quotes);
-
-//        // Debug:
-//        for(Quote q : quotes) {
-//            System.out.println(q);
-//        }
-//        quotesChannel.sendMessage(quotes.size() + " quotes ||loaded||!").queue();
+        return quotes;
     }
 
     private boolean save_quotes(Guild guild, ArrayList<Quote> quotes) {
@@ -162,10 +189,6 @@ public class EventListener extends ListenerAdapter implements Serializable {
         // Should do nothing if file already exists.
         try {
             Files.createFile(Path.of(f.toURI()));
-            System.out.println(f.exists());
-            if(f.exists()) {
-                System.out.println(f.getAbsolutePath());
-            }
         } catch (IOException e) {
             System.out.println("Error while creating file: " + e);
         }
