@@ -5,15 +5,17 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageHistory;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
-import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.events.guild.GuildReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class EventListener extends ListenerAdapter {
+public class EventListener extends ListenerAdapter implements Serializable {
 
     @Override
     public void onGuildReady(GuildReadyEvent event) { // When ready on a particular server.
@@ -21,6 +23,7 @@ public class EventListener extends ListenerAdapter {
         Guild guild = event.getGuild();
         List<GuildChannel> channelList = guild.getChannels();
         TextChannel quotesChannel = null;
+        ArrayList<Quote> quotes;
 
         for(GuildChannel ch : channelList) {
             if(ch.getName().equals("cool-quotes-by-us")) { // The name of the server to scrape for messages.
@@ -34,6 +37,17 @@ public class EventListener extends ListenerAdapter {
             return;
         }
 
+        quotes = this.load_quotes(guild);
+        if(quotes != null) {
+//            OffsetDateTime mtime = message.getTimeCreated(); // Method for getting time sent on a quote.
+            for(Quote q : quotes) {
+                System.out.println(q);
+            }
+            return; // Right now assumes that no messages has been sent since the bot was last online.
+        } else {
+            quotes = new ArrayList<>();
+        }
+
         // Get all previously sent messages of the Quotes Channel
         MessageHistory messageHistory = MessageHistory.getHistoryFromBeginning(quotesChannel).complete();
         List<Message> messages = messageHistory.getRetrievedHistory();
@@ -42,7 +56,6 @@ public class EventListener extends ListenerAdapter {
         String message;
         char[] messageLetters;
         ArrayList<Integer> inCorrectMessages = new ArrayList<>();
-        ArrayList<Quote> quotes = new ArrayList<>();
 
         int quoteStartIndex;
         int quoteEndIndex;
@@ -55,6 +68,7 @@ public class EventListener extends ListenerAdapter {
             quoteEndIndex = 0;
             sourceStartIndex = 0;
             sourceEndIndex = 0;
+
 
             message = messages.get(i).getContentDisplay();
             messageLetters = message.toCharArray();
@@ -130,23 +144,65 @@ public class EventListener extends ListenerAdapter {
             }
         }
 
-        // Debug:
-        for(Quote q : quotes) {
-            System.out.println(q);
-        }
+        this.save_quotes(guild, quotes);
+
+//        // Debug:
+//        for(Quote q : quotes) {
+//            System.out.println(q);
+//        }
 //        quotesChannel.sendMessage(quotes.size() + " quotes ||loaded||!").queue();
     }
 
+    private boolean save_quotes(Guild guild, ArrayList<Quote> quotes) {
+        Quote[] quoteArray = new Quote[1];
+        quoteArray = quotes.toArray(quoteArray);
 
+        File f = new File(guild.getId() + "Quotes.txt");
 
+        // Should do nothing if file already exists.
+        try {
+            Files.createFile(Path.of(f.toURI()));
+            System.out.println(f.exists());
+            if(f.exists()) {
+                System.out.println(f.getAbsolutePath());
             }
+        } catch (IOException e) {
+            System.out.println("Error while creating file: " + e);
         }
 
+        try (FileOutputStream fos = new FileOutputStream(f.getAbsolutePath())){
 
+            try(ObjectOutputStream oos = new ObjectOutputStream(fos)) {
+                oos.writeObject(quoteArray);
+            }
+        } catch (IOException e) {
+            System.out.println(e);
+            return false;
+        }
+        return true;
+    }
+
+    private ArrayList<Quote> load_quotes(Guild guild) {
+        ArrayList<Quote> quotes;
+        Quote[] quoteArray;
+        try {
+            FileInputStream fis = new FileInputStream(guild.getId() + "Quotes.txt");
+            try(ObjectInputStream ois = new ObjectInputStream(fis)) {
+                quoteArray = (Quote[]) ois.readObject();
+            } catch (FileNotFoundException e) {
+                System.out.println("No previously saved quotes found.");
+                return null;
+            } catch (ClassNotFoundException | IOException e) {
+                System.out.println(e);
+                return null;
+            }
+        } catch (FileNotFoundException e) {
+            System.out.println(e);
+            return null;
         }
 
-        }
-
+        quotes = new ArrayList<>(List.of(quoteArray));
+        return quotes;
     }
 }
 
