@@ -5,6 +5,7 @@ import io.github.cdimascio.dotenv.Dotenv;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.requests.GatewayIntent;
 
 public class QuoteBot {
     private final Dotenv config;
@@ -13,7 +14,7 @@ public class QuoteBot {
         this.config = Dotenv.configure().load();
         String token = config.get("TOKEN");
 
-        JDA api = JDABuilder.createDefault(token).addEventListeners(new EventListener()).build(); // Actually Run the bot.
+        JDA api = JDABuilder.createDefault(token).enableIntents(GatewayIntent.MESSAGE_CONTENT).addEventListeners(new EventListener()).build(); // Actually Run the bot.
         api.getPresence().setActivity(Activity.listening("Interesting Quotes"));
     }
 
