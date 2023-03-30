@@ -9,18 +9,11 @@ public class Quote implements Serializable {
     private String source;
     private String messageId;
     private String description = "";
-    private static HashMap<String, Integer> AuthorMap = new HashMap<>(); // Map of all the authors of quotes, and the amount of quotes they have contributed.
 
     public Quote(String quote, String source, String messageId) {
         this.quote = quote;
         this.source = source;
         this.messageId = messageId;
-
-        if (!AuthorMap.containsKey(this.source)) {
-            AuthorMap.put(this.source, 1);
-        } else {
-            AuthorMap.put(this.source, (AuthorMap.get(this.source)) + 1);
-        }
     }
 
     public Quote(String quote, String source, String messageId, String description) {
@@ -68,9 +61,5 @@ public class Quote implements Serializable {
 
     public void setMessageId(String messageId) {
         this.messageId = messageId;
-    }
-
-    public HashMap<String, Integer> getAuthorMap() {
-        return AuthorMap;
     }
 }

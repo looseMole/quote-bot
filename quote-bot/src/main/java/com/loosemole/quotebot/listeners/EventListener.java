@@ -6,6 +6,7 @@ import net.dv8tion.jda.api.entities.MessageHistory;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
 import net.dv8tion.jda.api.events.guild.GuildReadyEvent;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.internal.requests.Route;
@@ -14,11 +15,11 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class EventListener extends ListenerAdapter implements Serializable {
+    private HashMap<String, ArrayList<Quote>> quoteListMap = new HashMap<>(); // Storing all currently loaded quote-lists w. Guild ID as key.
 
     @Override
     public void onGuildReady(GuildReadyEvent event) { // When ready on a particular server.
@@ -29,7 +30,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
         ArrayList<Quote> quotes;
 
         for(GuildChannel ch : channelList) {
-            if(ch.getName().equals("cool-quotes-by-us")) { // The name of the server to scrape for messages.
+            if(ch.getName().equals("cool-quotes-by-us")) { // The name of the channel to scrape for messages.
                 quotesChannel = (TextChannel) ch;
                 break;
             }
@@ -45,18 +46,70 @@ public class EventListener extends ListenerAdapter implements Serializable {
         if(quotes == null) {
             // Get all previously sent messages of the Quotes Channel
             quotes = this.get_all_sent_quotes(quotesChannel);
-//            OffsetDateTime mtime = message.getTimeCreated(); // Method for getting time sent on a quote.
         } else {
             String latestQuoteId = quotes.get(0).getMessageId();
             quotes.addAll(this.get_quotes_since(quotesChannel, latestQuoteId));
         }
 
+        this.quoteListMap.put(guild.getId(), quotes);
         this.save_quotes(guild, quotes);
 //        // Debug:
 //        for(Quote q : quotes) {
 //            System.out.println(q);
 //        }
 //        quotesChannel.sendMessage(quotes.size() + " quotes ||loaded||!").queue();
+    }
+
+    @Override // Where the command-action happens.
+    public void onMessageReceived(MessageReceivedEvent event) {
+        String prefix = "!";  // The prefix for this bot's commands.
+        Message triggerMessage = event.getMessage();
+        String mContent = triggerMessage.getContentDisplay();
+
+        if(!mContent.startsWith(prefix)) {
+            return;
+        }
+
+        mContent = mContent.replaceFirst(prefix, "");  // Remove prefix.
+        TextChannel cChannel = (TextChannel) event.getChannel();
+
+        // All valid commands are under here:
+        switch(mContent.toLowerCase()) {
+            case "stats" -> cChannel.sendMessage((this.quotesStats(event.getGuild().getId()))).queue(); // Send stats to the events origin channel.
+            default -> cChannel.sendMessage("Unknown command: " + mContent); // TODO: Find out why this does not trigger.
+        }
+    }
+
+    private String quotesStats(String guildId) {
+        ArrayList<Quote> quotes = quoteListMap.get(guildId);
+        StringBuilder statBuilder = new StringBuilder();
+        HashMap<String, Integer> authorMap = new HashMap<>();
+
+        // Count how many quotes each saved "Source" has to their name.
+        for(int i = 0; i < quotes.size(); i++) {
+            Quote q = quotes.get(i);
+            String qAuthor = q.getSource();
+            if(!authorMap.containsKey(qAuthor)) {
+                authorMap.put(qAuthor, 1);
+            } else {
+                authorMap.put(qAuthor, authorMap.get(qAuthor) + 1); // Increment the number related to the author.
+            }
+        }
+
+        // NGL: This sorting is stolen from StackOverflow
+        Map<String,Integer> sortedMap =
+                authorMap.entrySet().stream()
+                        .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
+                        .collect(Collectors.toMap(
+                                Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
+
+        // Build stats-string.
+        for(String key : sortedMap.keySet()) {
+            statBuilder.append(key + ": " + sortedMap.get(key) + " Quotes.\n");
+        }
+
+        String stats = statBuilder.toString();
+        return stats;
     }
 
     // Return an ArrayList containing all quotes send since the list was last updated.
@@ -75,7 +128,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
             try {
                 latestMessage = quotesChannel.retrieveMessageById(latestMessageId).complete();
             } catch(ErrorResponseException e) {
-                System.out.println("The latest saved quote did not exist.");
+                System.out.println("The latest saved quote has probably been deleted.");
                 return null; // TODO: Handle MessageNotFoundError more gracefully, potentially by trying with the next-oldest saved quote.
             }
 
@@ -228,4 +281,3 @@ public class EventListener extends ListenerAdapter implements Serializable {
         return quotes;
     }
 }
-
