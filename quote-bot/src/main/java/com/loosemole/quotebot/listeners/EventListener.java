@@ -71,13 +71,57 @@ public class EventListener extends ListenerAdapter implements Serializable {
         }
 
         mContent = mContent.replaceFirst(prefix, "");  // Remove prefix.
+        String[] mWords = mContent.split(" ");
         TextChannel cChannel = (TextChannel) event.getChannel();
+        String guildId = event.getGuild().getId();
 
         // All valid commands are under here:
-        switch(mContent.toLowerCase()) {
-            case "stats" -> cChannel.sendMessage((this.quotesStats(event.getGuild().getId()))).queue(); // Send stats to the events origin channel.
+        switch(mWords[0].toLowerCase()) {
+            case "stats" -> cChannel.sendMessage((this.quotesStats(guildId))).queue(); // Send stats to the events origin channel.
+            case "random" -> {
+                if(mWords.length >= 2) {
+                    cChannel.sendMessage(getQuoteByName(guildId, mWords[1])).queue();
+                } else {
+                    cChannel.sendMessage(getRandomQuote(guildId)).queue();
+                }
+            }
             default -> cChannel.sendMessage("Unknown command: " + mContent); // TODO: Find out why this does not trigger.
         }
+    }
+
+    /*
+     * "Picks" a random number between 0 and the amount of quotes associated with the server, then returns the quote
+     * that is "sitting" on that index, in the server's quotes ArrayList.
+     */
+    public String getRandomQuote(String guildId) {
+        ArrayList<Quote> quotes = quoteListMap.get(guildId); // The quotes for this server.
+        int index = (int)(Math.random() * quotes.size()); // Random number between 0 and quotes-size.
+        String quote = quotes.get(index).toString();
+        return quote;
+    }
+
+    /*
+    * Runs through the ArrayList of quotes for the server, adding any quotes by an author with a matching name to a new
+    * temporary ArrayList. - Then performs the same operation as getRandomQuote on this, smaller list.
+    * As both the server-wide amount of quotes, and the amount of quotes associated with the same name can be very large,
+    * this is not optimally memory-efficient.
+    */
+    public String getQuoteByName(String guildId, String quoteAuthor) {
+        ArrayList<Quote> quotes = quoteListMap.get(guildId); // The quotes for this server.
+        ArrayList<Quote> namedQuotes = new ArrayList<>();
+
+        // Compose list of all quotes attributed to the same person
+        for(Quote q : quotes) {
+            if(q.getSource().equals(quoteAuthor)) {
+                namedQuotes.add(q);
+            }
+        }
+        if(namedQuotes.size() == 0) {
+            return "Couldn't find any quotes attributed to \"" + quoteAuthor + "\".";
+        }
+
+        int index = (int)(Math.random() * namedQuotes.size()); // Random number between 0 and quotes-size.
+        return namedQuotes.get(index).toString();
     }
 
     private String quotesStats(String guildId) {
