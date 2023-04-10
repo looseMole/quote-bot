@@ -240,8 +240,15 @@ public class EventListener extends ListenerAdapter implements Serializable {
                 continue;
             }
 
-            if(messageLetters[0] != '"') { // If message does not start with a '"', it is not on "correct" form.
-                if(messageLetters[0] == '|' && messageLetters[2] == '"') {
+            /*
+                Checks for multiple possible starting quote-characters.
+             */
+            String[] validQStarters = {"\"", "“", "”"};
+            boolean startsRight = Arrays.asList(validQStarters).contains(String.valueOf(messageLetters[0]));
+
+            if(!startsRight) { // If message does not start with a '"' or '“', it is not on "correct" form.
+                boolean continuesOK = Arrays.asList(validQStarters).contains(String.valueOf(messageLetters[2]));
+                if (messageLetters[0] == '|' && continuesOK) {
                     quoteStartIndex = 2;
                 } else {
                     inCorrectMessages.add(i);
@@ -251,7 +258,10 @@ public class EventListener extends ListenerAdapter implements Serializable {
             }
 
             for(int j = quoteStartIndex + 1; j < messageLetters.length; j++) {
-                if(messageLetters[j] == '"') {
+                boolean isEndOfQuote = Arrays.asList(validQStarters).contains(String.valueOf(messageLetters[j]));
+                boolean isEndOfMessage = messageLetters.length <= j + 1;
+
+                if(isEndOfQuote && !isEndOfMessage) {
                     if(messageLetters[j + 1] == '|' && messageLetters[j + 2] == '|') {
                         quoteEndIndex = j + 3;
                         break;
@@ -259,6 +269,8 @@ public class EventListener extends ListenerAdapter implements Serializable {
                         quoteEndIndex = j + 1;
                         break;
                     }
+                } else if (isEndOfQuote && isEndOfMessage) {
+                    System.out.println(message + " Has a quote end, but no source.");
                 }
             }
 
