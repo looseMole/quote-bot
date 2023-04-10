@@ -6,34 +6,30 @@ import net.dv8tion.jda.api.entities.MessageHistory;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
 import net.dv8tion.jda.api.events.guild.GuildReadyEvent;
-import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageDeleteEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.MessageUpdateEvent;
 import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import net.dv8tion.jda.api.interactions.components.buttons.Button;
-import net.dv8tion.jda.internal.requests.Route;
 
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class EventListener extends ListenerAdapter implements Serializable {
     private HashMap<String, ArrayList<Quote>> quoteListMap = new HashMap<>(); // Storing all currently loaded quote-lists w. Guild ID as key.
-    private HashMap<String, String> guessAnswers = new HashMap<>(); // Stores the answers for the "guess"-command, on the form: "
 
+    // When ready on a particular server.
     @Override
-    public void onGuildReady(GuildReadyEvent event) { // When ready on a particular server.
-        // Check if server has the correctly named channel to scrape from
+    public void onGuildReady(GuildReadyEvent event) {
         Guild guild = event.getGuild();
         List<GuildChannel> channelList = guild.getChannels();
         TextChannel quotesChannel = null;
         ArrayList<Quote> quotes;
 
+        // Check if server has the correctly named channel to scrape from
         for(GuildChannel ch : channelList) {
             if(ch.getName().equals("cool-quotes-by-us")) { // The name of the channel to scrape for messages.
                 quotesChannel = (TextChannel) ch;
@@ -82,7 +78,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
         String mContent = triggerMessage.getContentDisplay();
 
         if(!mContent.startsWith(prefix)) {
-            return; // TODO: In that case, attempt to parse the message as a new quote.
+            return; // TODO: In that case, if in the right channel, attempt to parse the message as a new quote.
         }
 
         mContent = mContent.replaceFirst(prefix, "");  // Remove prefix.
