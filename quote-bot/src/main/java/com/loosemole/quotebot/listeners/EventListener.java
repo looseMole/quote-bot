@@ -174,6 +174,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
         HashMap<String, Integer> authorMap = new HashMap<>();
 
         // Count how many quotes each saved "Source" has to their name.
+        statBuilder.append(quotes.size()+" quotes loaded.\n");
         for(int i = 0; i < quotes.size(); i++) {
             Quote q = quotes.get(i);
             String qAuthor = q.getSource();
