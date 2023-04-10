@@ -53,6 +53,26 @@ public class EventListener extends ListenerAdapter implements Serializable {
             quotes.addAll(this.get_quotes_since(quotesChannel, latestQuoteId));
         }
 
+        /*
+            Keep updating list of quotes until getHistory requests returns no new messages.
+        */
+        int amountOfQuotes = quotes.size();
+        int updatedAmountOfQuotes = -1;
+        int loopCounter = 0;
+        while(amountOfQuotes != updatedAmountOfQuotes && loopCounter < 20) {
+            if(updatedAmountOfQuotes > amountOfQuotes) {
+                amountOfQuotes = updatedAmountOfQuotes;
+            }
+
+            String latestQuoteId = quotes.get(quotes.size()-1).getMessageId();
+            quotes.addAll(this.get_quotes_since(quotesChannel, latestQuoteId));
+
+            updatedAmountOfQuotes = quotes.size();
+            loopCounter++;
+
+            System.out.println("get_quotes_since has been called for " + guild.getName() + ", " + loopCounter + "times during this startup...");
+        }
+
         this.quoteListMap.put(guild.getId(), quotes);
         this.save_quotes(guild, quotes);
     }
