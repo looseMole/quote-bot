@@ -48,7 +48,8 @@ public class EventListener extends ListenerAdapter implements Serializable {
             // Get all previously sent messages of the Quotes Channel
             quotes = this.get_all_sent_quotes(quotesChannel);
         } else {
-            String latestQuoteId = quotes.get(0).getMessageId();
+            // Update list of quotes with the ones sent since last saved quote.
+            String latestQuoteId = quotes.get(quotes.size()-1).getMessageId();  // TODO: Rework how to find latest saved quote. This only works once, as the latest messages are not added in the beginning of the arrayList.
             quotes.addAll(this.get_quotes_since(quotesChannel, latestQuoteId));
         }
 
@@ -202,7 +203,14 @@ public class EventListener extends ListenerAdapter implements Serializable {
             messageHistory = MessageHistory.getHistoryAfter(quotesChannel, latestMessage.getId()).complete();
         }
 
-        List<Message> messages = messageHistory.getRetrievedHistory();
+        List<Message> reverseMessages = messageHistory.getRetrievedHistory(); // Returns list of retrieved messages, sorted from newest to oldest.
+
+        // Reverse the sorting of the list.
+        ArrayList<Message> messages = new ArrayList<>();
+        for(Message m : reverseMessages) {
+            messages.add(m);
+        }
+        Collections.reverse(messages);
 
         // Identify "Correctly formatted messages"
         String message;
