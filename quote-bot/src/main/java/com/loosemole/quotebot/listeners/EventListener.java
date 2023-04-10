@@ -6,9 +6,13 @@ import net.dv8tion.jda.api.entities.MessageHistory;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
 import net.dv8tion.jda.api.events.guild.GuildReadyEvent;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.events.message.MessageDeleteEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.message.MessageUpdateEvent;
 import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.internal.requests.Route;
 
 import java.io.*;
@@ -20,6 +24,7 @@ import java.util.stream.Collectors;
 
 public class EventListener extends ListenerAdapter implements Serializable {
     private HashMap<String, ArrayList<Quote>> quoteListMap = new HashMap<>(); // Storing all currently loaded quote-lists w. Guild ID as key.
+    private HashMap<String, String> guessAnswers = new HashMap<>(); // Stores the answers for the "guess"-command, on the form: "
 
     @Override
     public void onGuildReady(GuildReadyEvent event) { // When ready on a particular server.
@@ -53,21 +58,31 @@ public class EventListener extends ListenerAdapter implements Serializable {
 
         this.quoteListMap.put(guild.getId(), quotes);
         this.save_quotes(guild, quotes);
-//        // Debug:
-//        for(Quote q : quotes) {
-//            System.out.println(q);
-//        }
-//        quotesChannel.sendMessage(quotes.size() + " quotes ||loaded||!").queue();
+    }
+
+    // TODO: Override the below methods.
+    @Override
+    public void onMessageDelete(MessageDeleteEvent event) {
+        super.onMessageDelete(event);
+    }
+
+    @Override
+    public void onMessageUpdate(MessageUpdateEvent event) {
+        super.onMessageUpdate(event);
     }
 
     @Override // Where the command-action happens.
     public void onMessageReceived(MessageReceivedEvent event) {
+        // Safeguards:
+        if (!event.isFromGuild()) return;
+        if (event.getAuthor().isBot()) return;
+
         String prefix = "!";  // The prefix for this bot's commands.
         Message triggerMessage = event.getMessage();
         String mContent = triggerMessage.getContentDisplay();
 
         if(!mContent.startsWith(prefix)) {
-            return;
+            return; // TODO: In that case, attempt to parse the message as a new quote.
         }
 
         mContent = mContent.replaceFirst(prefix, "");  // Remove prefix.
@@ -80,9 +95,22 @@ public class EventListener extends ListenerAdapter implements Serializable {
             case "stats" -> cChannel.sendMessage((this.quotesStats(guildId))).queue(); // Send stats to the events origin channel.
             case "random" -> {
                 if(mWords.length >= 2) {
-                    cChannel.sendMessage(getQuoteByName(guildId, mWords[1])).queue();
+                    try {
+                        cChannel.sendMessage(this.getQuoteByName(guildId, mWords[1]).toString()).queue();
+                    } catch(NullPointerException e) {
+                        cChannel.sendMessage("No quotes attributed to \"" + mWords[1] + "\" found.").queue();
+                    }
                 } else {
-                    cChannel.sendMessage(getRandomQuote(guildId)).queue();
+                    cChannel.sendMessage(this.getRandomQuote(guildId).toString()).queue();
+                }
+            }
+            case "guess" -> {  // TODO: Find a more creative way to reveal answer.
+                Quote randomQuote = this.getRandomQuote(guildId);
+
+                if(randomQuote.getDescription().equals("")) {
+                    cChannel.sendMessage("Who said: " + randomQuote.getQuote() + "? Answer: ||"+randomQuote.getSource()+"||\"").queue();
+                } else /*(If The Quote has a desc, it can be treated as a hint)*/ {
+                    cChannel.sendMessage("Who said: " + randomQuote.getQuote() + "? Hint: ||" + randomQuote.getDescription() + "|| Answer: ||\""+randomQuote.getSource()+"\"||").queue();
                 }
             }
             default -> cChannel.sendMessage("Unknown command: " + mContent); // TODO: Find out why this does not trigger.
@@ -93,11 +121,10 @@ public class EventListener extends ListenerAdapter implements Serializable {
      * "Picks" a random number between 0 and the amount of quotes associated with the server, then returns the quote
      * that is "sitting" on that index, in the server's quotes ArrayList.
      */
-    public String getRandomQuote(String guildId) {
+    public Quote getRandomQuote(String guildId) {
         ArrayList<Quote> quotes = quoteListMap.get(guildId); // The quotes for this server.
         int index = (int)(Math.random() * quotes.size()); // Random number between 0 and quotes-size.
-        String quote = quotes.get(index).toString();
-        return quote;
+        return quotes.get(index);
     }
 
     /*
@@ -106,7 +133,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
     * As both the server-wide amount of quotes, and the amount of quotes associated with the same name can be very large,
     * this is not optimally memory-efficient.
     */
-    public String getQuoteByName(String guildId, String quoteAuthor) {
+    public Quote getQuoteByName(String guildId, String quoteAuthor) throws NullPointerException {
         ArrayList<Quote> quotes = quoteListMap.get(guildId); // The quotes for this server.
         ArrayList<Quote> namedQuotes = new ArrayList<>();
 
@@ -117,11 +144,11 @@ public class EventListener extends ListenerAdapter implements Serializable {
             }
         }
         if(namedQuotes.size() == 0) {
-            return "Couldn't find any quotes attributed to \"" + quoteAuthor + "\".";
+            throw new NullPointerException();
         }
 
         int index = (int)(Math.random() * namedQuotes.size()); // Random number between 0 and quotes-size.
-        return namedQuotes.get(index).toString();
+        return namedQuotes.get(index);
     }
 
     private String quotesStats(String guildId) {
@@ -184,7 +211,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
         // Identify "Correctly formatted messages"
         String message;
         char[] messageLetters;
-        ArrayList<Integer> inCorrectMessages = new ArrayList<>();
+        ArrayList<Integer> inCorrectMessages = new ArrayList<>(); // TODO: Actually use inCorrectMessages for something.
 
         int quoteStartIndex;
         int quoteEndIndex;
@@ -193,6 +220,8 @@ public class EventListener extends ListenerAdapter implements Serializable {
         int descStartIndex;
 
         for(int i = 0; i < messages.size(); i++) {
+            if (messages.get(i).getAuthor().isBot()) continue; // Bots are not quoteable.
+
             quoteStartIndex = 0;
             quoteEndIndex = 0;
             sourceStartIndex = 0;
