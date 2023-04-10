@@ -49,7 +49,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
             quotes = this.get_all_sent_quotes(quotesChannel);
         } else {
             // Update list of quotes with the ones sent since last saved quote.
-            String latestQuoteId = quotes.get(quotes.size()-1).getMessageId();  // TODO: Rework how to find latest saved quote. This only works once, as the latest messages are not added in the beginning of the arrayList.
+            String latestQuoteId = quotes.get(quotes.size()-1).getMessageId();
             quotes.addAll(this.get_quotes_since(quotesChannel, latestQuoteId));
         }
 
