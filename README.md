@@ -10,7 +10,7 @@ I wanted a command-driven bot which could process all of these quotes, and then 
   
 The "Standard formula" for these quotes, are: `"<Quote>" - <Author> <[Optionally] a bit of context>`
 
-Proposed features:
+**Initially proposed features**
 1. “Random quote”
 2. “Random quote by name”
 3. “Who said?”: A form of quiz game where the bot presents a quote, and possibly some options, and then the server members have to guess who said that quote.
