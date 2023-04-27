@@ -16,6 +16,9 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.regex.MatchResult;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class EventListener extends ListenerAdapter implements Serializable {
@@ -248,14 +251,39 @@ public class EventListener extends ListenerAdapter implements Serializable {
                 continue;
             }
 
+            Quote q;
+            String m = ""; // Message
+            String s = ""; // Message source / quoted author
+            String pm = ""; // Pre-meta
+            String mm = ""; // Mid-meta
+            String pom = ""; // Post-meta
+
+            Pattern pattern = Pattern.compile("^(?<premta>.*?)(?:\\|?[\"'“](?<qoute>.+)[\"'”]\\|?) ?(?: ?(?<midmeta>.*) ?(?=[-/]))?[-/]? ?(?<name>\\w+)[,]? ?(?<postmeta>.*)"); // Props to MidnightRocket for this RegEx work.
+            Matcher matcher = pattern.matcher(message);
+
+            if(matcher.find()) {
+                if(!(matcher.group("quote") == null | matcher.group("quote").isEmpty() | matcher.group("name") == null | matcher.group("name").isEmpty())) {
+                    m = matcher.group("quote");
+                    s = matcher.group("name");
+                    q = new Quote(m, s, messageId);
                 } else {
+                    inCorrectMessages.add(i); // TODO: Rework inCorrectMessages system.
                     continue;
                 }
 
+                // TODO: rework checks for meta here.
+                if(!pm.isEmpty()) {
+                    q.setPreMeta(pm);
+                } if(!mm.isEmpty()) {
+                    q.setMidMeta(mm);
+                } if(!pom.isEmpty()) {
+                    q.setPostMeta(pom);
                 }
 
             } else {
+                continue;
             }
+            quotes.add(q);
         }
 
         return quotes;
