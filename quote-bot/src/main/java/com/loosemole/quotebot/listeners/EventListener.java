@@ -258,7 +258,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
             String mm = ""; // Mid-meta
             String pom = ""; // Post-meta
 
-            Pattern pattern = Pattern.compile("^(?<premta>.*?)(?:\\|?[\"'“](?<qoute>.+)[\"'”]\\|?) ?(?: ?(?<midmeta>.*) ?(?=[-/]))?[-/]? ?(?<name>\\w+)[,]? ?(?<postmeta>.*)"); // Props to MidnightRocket for this RegEx work.
+            Pattern pattern = Pattern.compile("^(?<premeta>.*?)(?:\\|?[\"'“](?<qoute>.+)[\"'”]\\|?) ?(?: ?(?<midmeta>.*) ?(?=[-/]))?[-/]? ?(?<name>\\w+)[,]? ?(?<postmeta>.*)"); // Props to MidnightRocket for this RegEx work.
             Matcher matcher = pattern.matcher(message);
 
             if(matcher.find()) {
