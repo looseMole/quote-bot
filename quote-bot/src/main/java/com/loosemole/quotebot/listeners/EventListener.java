@@ -207,6 +207,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
     }
 
     private ArrayList<Quote> get_quotes_since(TextChannel quotesChannel, String latestMessageId) {
+        throw new UnsupportedOperationException();
         ArrayList<Quote> quotes = new ArrayList<>();
         MessageHistory messageHistory;
 
@@ -235,108 +236,25 @@ public class EventListener extends ListenerAdapter implements Serializable {
 
         // Identify "Correctly formatted messages"
         String message;
-        char[] messageLetters;
         ArrayList<Integer> inCorrectMessages = new ArrayList<>(); // TODO: Actually use inCorrectMessages for something.
-
-        int quoteStartIndex;
-        int quoteEndIndex;
-        int sourceStartIndex;
-        int sourceEndIndex;
-        int descStartIndex;
 
         for(int i = 0; i < messages.size(); i++) {
             if (messages.get(i).getAuthor().isBot()) continue; // Bots are not quoteable.
 
-            quoteStartIndex = 0;
-            quoteEndIndex = 0;
-            sourceStartIndex = 0;
-            sourceEndIndex = 0;
-
-
             message = messages.get(i).getContentDisplay();
             String messageId = messages.get(i).getId();
-            messageLetters = message.toCharArray();
 
             if(message.isEmpty()) {
                 continue;
             }
 
-            /*
-                Checks for multiple possible starting quote-characters.
-             */
-            String[] validQStarters = {"\"", "“", "”"};
-            boolean startsRight = Arrays.asList(validQStarters).contains(String.valueOf(messageLetters[0]));
-
-            if(!startsRight) { // If message does not start with a '"' or '“', it is not on "correct" form.
-                boolean continuesOK = Arrays.asList(validQStarters).contains(String.valueOf(messageLetters[2]));
-                if (messageLetters[0] == '|' && continuesOK) {
-                    quoteStartIndex = 2;
                 } else {
-                    inCorrectMessages.add(i);
-                    System.out.println(message + " Does not start wih a '\"'.");
                     continue;
                 }
-            }
 
-            for(int j = quoteStartIndex + 1; j < messageLetters.length; j++) {
-                boolean isEndOfQuote = Arrays.asList(validQStarters).contains(String.valueOf(messageLetters[j]));
-                boolean isEndOfMessage = messageLetters.length <= j + 1;
-
-                if(isEndOfQuote && !isEndOfMessage) {
-                    if(messageLetters[j + 1] == '|' && messageLetters[j + 2] == '|') {
-                        quoteEndIndex = j + 3;
-                        break;
-                    } else {
-                        quoteEndIndex = j + 1;
-                        break;
-                    }
-                } else if (isEndOfQuote && isEndOfMessage) {
-                    System.out.println(message + " Has a quote end, but no source.");
                 }
-            }
 
-            if(quoteEndIndex == 0) { // If endofquote or start of source has not been found.
-                inCorrectMessages.add(i);
-                System.out.println(message + " Does not have a end of quote.");
-                continue;
-            }
-
-            for(int j = quoteEndIndex; j < messageLetters.length; j++) {
-                if (messageLetters[j] != ' ' && messageLetters[j] != '-') {
-                    sourceStartIndex = j;
-                    break;
-                }
-            }
-
-            if(sourceStartIndex == 0) { // If start of source has not been found.
-                inCorrectMessages.add(i);
-                System.out.println(message + " Does not have a source start.");
-                continue;
-            }
-
-            for(int j = sourceStartIndex; j < messageLetters.length; j++) {
-                if(messageLetters[j] == ' ') {
-                    sourceEndIndex = j;
-                    break;
-                }
-            }
-
-            if(sourceEndIndex == 0) { // In that case, there is no description.
-                sourceEndIndex = messageLetters.length;
-            }
-
-            String m = new String(Arrays.copyOfRange(messageLetters, 0, quoteEndIndex));
-            String s = new String(Arrays.copyOfRange(messageLetters, sourceStartIndex, sourceEndIndex));
-
-            if(sourceEndIndex != messageLetters.length) { // Because then there *is* a description.
-                descStartIndex = sourceEndIndex + 1;
-                String d =  new String(Arrays.copyOfRange(messageLetters, descStartIndex, messageLetters.length));
-
-                Quote q = new Quote(m, s, messageId, d.trim());
-                quotes.add(q);
             } else {
-                Quote q = new Quote(m, s, messageId);
-                quotes.add(q);
             }
         }
 
