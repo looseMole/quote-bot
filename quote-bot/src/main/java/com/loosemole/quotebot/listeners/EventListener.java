@@ -62,7 +62,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
         int amountOfQuotes = quotes.size();
         int updatedAmountOfQuotes = -1;
         int loopCounter = 0;
-        while(amountOfQuotes != updatedAmountOfQuotes && loopCounter < 20) {
+        while(amountOfQuotes > 0 && (amountOfQuotes != updatedAmountOfQuotes && loopCounter < 30)) {
             if(updatedAmountOfQuotes > amountOfQuotes) {
                 amountOfQuotes = updatedAmountOfQuotes;
             }
@@ -140,7 +140,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
                         sb.append(" - <source> ")
                                 .append("||" + randomQuote.getPostMeta() + "||");
                     }
-                    cChannel.sendMessage("Who said: " + sb.toString() + " Answer: ||\""+randomQuote.getSource()+"\"||").queue();
+                    cChannel.sendMessage("Who said: " + sb + "? Answer: ||\""+randomQuote.getSource()+"\"||").queue();
                 }
             }
             default -> cChannel.sendMessage("Unknown command: " + mContent); // TODO: Find out why this does not trigger.
@@ -261,35 +261,26 @@ public class EventListener extends ListenerAdapter implements Serializable {
             }
 
             Quote q;
-            String m = ""; // Message
-            String s = ""; // Message source / quoted author
+            String m; // Message
+            String s; // Message source / quoted author
 
-            Pattern pattern = Pattern.compile("^(?<premeta>.*?)(?:\\|?[\"'“](?<qoute>.+)[\"'”]\\|?) ?(?: ?(?<midmeta>.*) ?(?=[-/]))?[-/]? ?(?<name>\\w+)[,]? ?(?<postmeta>.*)"); // Props to MidnightRocket for this RegEx work.
+            LinkedList<Quote> convoQs = new LinkedList<>();
+
+            Pattern pattern = Pattern.compile("^(?<premeta>.*?)(?:\\|?[\"'“](?<quote>.+)[\"'”]\\|?) ?(?: ?(?<midmeta>.*) ?(?=[-/]))?[-/]? ?(?<name>\\w+)[,]? ?(?<postmeta>.*)"); // Props to MidnightRocket for this RegEx work.
             Matcher matcher = pattern.matcher(message);
 
-            if(matcher.find()) {
+            while(matcher.find()) {
                 if(!(matcher.group("quote") == null | matcher.group("quote").isEmpty() | matcher.group("name") == null | matcher.group("name").isEmpty())) {
-                    m = matcher.group("quote");
-                    s = matcher.group("name");
-                    q = new Quote(m, s, messageId);
+                    m = "\"" + matcher.group("quote") + "\"";
+                    s = matcher.group("name").toLowerCase();
+                    s = s.substring(0, 1).toUpperCase() + s.substring(1);
+                    convoQs.add(new Quote(m, s, messageId));
                 } else {
                     inCorrectMessages.add(i); // TODO: Rework inCorrectMessages system.
                     continue;
                 }
-
-                // If any meta has been caught by the RegEx, add it to the Quote object.
-                if(!(matcher.group("premeta") == null) | matcher.group("premeta").isEmpty()) {
-                    q.setPreMeta(matcher.group("premeta"));
-                } if(!(matcher.group("midmeta") == null) | matcher.group("midmeta").isEmpty()) {
-                    q.setMidMeta(matcher.group("midmeta"));
-                } if(!(matcher.group("postmeta") == null) | matcher.group("postmeta").isEmpty()) {
-                    q.setPostMeta(matcher.group("postmeta"));
-                }
-
-            } else {
-                continue;
             }
-            quotes.add(q);
+            quotes.addAll(convoQs);
         }
 
         return quotes;
