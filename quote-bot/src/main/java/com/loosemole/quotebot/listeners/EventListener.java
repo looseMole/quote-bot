@@ -128,7 +128,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
                 Quote randomQuote = this.getRandomQuote(guildId);
 
                 if(!randomQuote.hasMeta()) {
-                    cChannel.sendMessage("Who said: " + randomQuote.getQuote() + "? Answer: ||"+randomQuote.getSource()+"||\"").queue();
+                    cChannel.sendMessage("Who said: " + randomQuote.getQuote() + "? Answer: ||"+randomQuote.getSource()+"||").queue();
                 } else /*(If The Quote has meta text, the meta can be treated as a hint)*/ {
                     StringBuilder sb = new StringBuilder(randomQuote.getQuote());
                     if(!randomQuote.getPreMeta().equals("")) {
@@ -140,7 +140,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
                         sb.append(" - <source> ")
                                 .append("||" + randomQuote.getPostMeta() + "||");
                     }
-                    cChannel.sendMessage("Who said: " + sb + "? Answer: ||\""+randomQuote.getSource()+"\"||").queue();
+                    cChannel.sendMessage("Who said: " + sb + "? Answer: ||"+randomQuote.getSource()+"||").queue();
                 }
             }
             default -> cChannel.sendMessage("Unknown command: " + mContent); // TODO: Find out why this does not trigger.
