@@ -210,7 +210,6 @@ public class EventListener extends ListenerAdapter implements Serializable {
     }
 
     private ArrayList<Quote> get_quotes_since(TextChannel quotesChannel, String latestMessageId) {
-        throw new UnsupportedOperationException();
         ArrayList<Quote> quotes = new ArrayList<>();
         MessageHistory messageHistory;
 
@@ -254,9 +253,6 @@ public class EventListener extends ListenerAdapter implements Serializable {
             Quote q;
             String m = ""; // Message
             String s = ""; // Message source / quoted author
-            String pm = ""; // Pre-meta
-            String mm = ""; // Mid-meta
-            String pom = ""; // Post-meta
 
             Pattern pattern = Pattern.compile("^(?<premeta>.*?)(?:\\|?[\"'“](?<qoute>.+)[\"'”]\\|?) ?(?: ?(?<midmeta>.*) ?(?=[-/]))?[-/]? ?(?<name>\\w+)[,]? ?(?<postmeta>.*)"); // Props to MidnightRocket for this RegEx work.
             Matcher matcher = pattern.matcher(message);
@@ -271,13 +267,13 @@ public class EventListener extends ListenerAdapter implements Serializable {
                     continue;
                 }
 
-                // TODO: rework checks for meta here.
-                if(!pm.isEmpty()) {
-                    q.setPreMeta(pm);
-                } if(!mm.isEmpty()) {
-                    q.setMidMeta(mm);
-                } if(!pom.isEmpty()) {
-                    q.setPostMeta(pom);
+                // If any meta has been caught by the RegEx, add it to the Quote object.
+                if(!(matcher.group("premeta") == null) | matcher.group("premeta").isEmpty()) {
+                    q.setPreMeta(matcher.group("premeta"));
+                } if(!(matcher.group("midmeta") == null) | matcher.group("midmeta").isEmpty()) {
+                    q.setMidMeta(matcher.group("midmeta"));
+                } if(!(matcher.group("postmeta") == null) | matcher.group("postmeta").isEmpty()) {
+                    q.setPostMeta(matcher.group("postmeta"));
                 }
 
             } else {

@@ -8,7 +8,9 @@ public class Quote implements Serializable {
     private String quote;
     private String source;
     private String messageId;
-    private String description = "";
+    private String preMeta;
+    private String midMeta;
+    private String postMeta;
 
     public Quote(String quote, String source, String messageId) {
         this.quote = quote;
@@ -16,18 +18,9 @@ public class Quote implements Serializable {
         this.messageId = messageId;
     }
 
-    public Quote(String quote, String source, String messageId, String description) {
-        this(quote, source, messageId);
-        this.description = description;
-    }
-
     @Override
     public String toString() {
-        if(this.description == ""){
-            return this.quote + " - " + this.source;
-        } else {
-            return this.quote + " - " + this.source + " " + this.description;
-        }
+        return this.quote + " - " + this.source;
     }
 
     // Getter/Setters:
@@ -47,19 +40,35 @@ public class Quote implements Serializable {
         this.source = source;
     }
 
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
     public String getMessageId() {
         return messageId;
     }
 
     public void setMessageId(String messageId) {
         this.messageId = messageId;
+    }
+
+    public String getPreMeta() {
+        return preMeta;
+    }
+
+    public void setPreMeta(String preMeta) {
+        this.preMeta = preMeta;
+    }
+
+    public String getMidMeta() {
+        return midMeta;
+    }
+
+    public void setMidMeta(String midMeta) {
+        this.midMeta = midMeta;
+    }
+
+    public String getPostMeta() {
+        return postMeta;
+    }
+
+    public void setPostMeta(String postMeta) {
+        this.postMeta = postMeta;
     }
 }
