@@ -8,14 +8,18 @@ public class Quote implements Serializable {
     private String quote;
     private String source;
     private String messageId;
-    private String preMeta;
-    private String midMeta;
-    private String postMeta;
+    private String preMeta = "";
+    private String midMeta = "";
+    private String postMeta = "";
 
     public Quote(String quote, String source, String messageId) {
         this.quote = quote;
         this.source = source;
         this.messageId = messageId;
+    }
+
+    public boolean hasMeta() {
+        return (!preMeta.isEmpty() | !midMeta.isEmpty() | !postMeta.isEmpty());
     }
 
     @Override
