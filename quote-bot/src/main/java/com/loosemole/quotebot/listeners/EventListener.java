@@ -16,6 +16,9 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.regex.MatchResult;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class EventListener extends ListenerAdapter implements Serializable {
@@ -59,7 +62,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
         int amountOfQuotes = quotes.size();
         int updatedAmountOfQuotes = -1;
         int loopCounter = 0;
-        while(amountOfQuotes != updatedAmountOfQuotes && loopCounter < 20) {
+        while(amountOfQuotes > 0 && (amountOfQuotes != updatedAmountOfQuotes && loopCounter < 30)) {
             if(updatedAmountOfQuotes > amountOfQuotes) {
                 amountOfQuotes = updatedAmountOfQuotes;
             }
@@ -124,10 +127,20 @@ public class EventListener extends ListenerAdapter implements Serializable {
             case "guess" -> {  // TODO: Find a more creative way to reveal answer.
                 Quote randomQuote = this.getRandomQuote(guildId);
 
-                if(randomQuote.getDescription().equals("")) {
-                    cChannel.sendMessage("Who said: " + randomQuote.getQuote() + "? Answer: ||"+randomQuote.getSource()+"||\"").queue();
-                } else /*(If The Quote has a desc, it can be treated as a hint)*/ {
-                    cChannel.sendMessage("Who said: " + randomQuote.getQuote() + "? Hint: ||" + randomQuote.getDescription() + "|| Answer: ||\""+randomQuote.getSource()+"\"||").queue();
+                if(!randomQuote.hasMeta()) {
+                    cChannel.sendMessage("Who said: " + randomQuote.getQuote() + "? Answer: ||"+randomQuote.getSource()+"||").queue();
+                } else /*(If The Quote has meta text, the meta can be treated as a hint)*/ {
+                    StringBuilder sb = new StringBuilder(randomQuote.getQuote());
+                    if(!randomQuote.getPreMeta().equals("")) {
+                        sb = new StringBuilder(randomQuote.getPreMeta())
+                                .append("||" + randomQuote.getQuote() + "||");
+                    } if (!randomQuote.getMidMeta().equals("")) {
+                        sb.append("||" + randomQuote.getMidMeta() + "||");
+                    } if (!randomQuote.getPostMeta().equals("")) {
+                        sb.append(" - <source> ")
+                                .append("||" + randomQuote.getPostMeta() + "||");
+                    }
+                    cChannel.sendMessage("Who said: " + sb + "? Answer: ||"+randomQuote.getSource()+"||").queue();
                 }
             }
             default -> cChannel.sendMessage("Unknown command: " + mContent); // TODO: Find out why this does not trigger.
@@ -235,109 +248,39 @@ public class EventListener extends ListenerAdapter implements Serializable {
 
         // Identify "Correctly formatted messages"
         String message;
-        char[] messageLetters;
         ArrayList<Integer> inCorrectMessages = new ArrayList<>(); // TODO: Actually use inCorrectMessages for something.
-
-        int quoteStartIndex;
-        int quoteEndIndex;
-        int sourceStartIndex;
-        int sourceEndIndex;
-        int descStartIndex;
 
         for(int i = 0; i < messages.size(); i++) {
             if (messages.get(i).getAuthor().isBot()) continue; // Bots are not quoteable.
 
-            quoteStartIndex = 0;
-            quoteEndIndex = 0;
-            sourceStartIndex = 0;
-            sourceEndIndex = 0;
-
-
             message = messages.get(i).getContentDisplay();
             String messageId = messages.get(i).getId();
-            messageLetters = message.toCharArray();
 
             if(message.isEmpty()) {
                 continue;
             }
 
-            /*
-                Checks for multiple possible starting quote-characters.
-             */
-            String[] validQStarters = {"\"", "“", "”"};
-            boolean startsRight = Arrays.asList(validQStarters).contains(String.valueOf(messageLetters[0]));
+            Quote q;
+            String m; // Message
+            String s; // Message source / quoted author
 
-            if(!startsRight) { // If message does not start with a '"' or '“', it is not on "correct" form.
-                boolean continuesOK = Arrays.asList(validQStarters).contains(String.valueOf(messageLetters[2]));
-                if (messageLetters[0] == '|' && continuesOK) {
-                    quoteStartIndex = 2;
+            LinkedList<Quote> convoQs = new LinkedList<>();
+
+            Pattern pattern = Pattern.compile("^(?<premeta>.*?)(?:\\|?[\"'“](?<quote>.+)[\"'”]\\|?) ?(?: ?(?<midmeta>.*) ?(?=[-/]))?[-/]? ?(?<name>\\w+)[,]? ?(?<postmeta>.*)"); // Props to MidnightRocket for this RegEx work.
+            Matcher matcher = pattern.matcher(message);
+
+            while(matcher.find()) {
+                if(!(matcher.group("quote") == null | matcher.group("quote").isEmpty() | matcher.group("name") == null | matcher.group("name").isEmpty())) {
+                    m = "\"" + matcher.group("quote") + "\"";
+                    s = matcher.group("name").toLowerCase();
+                    s = s.substring(0, 1).toUpperCase() + s.substring(1);
+                    convoQs.add(new Quote(m, s, messageId));
                 } else {
-                    inCorrectMessages.add(i);
-                    System.out.println(message + " Does not start wih a '\"'.");
+                    inCorrectMessages.add(i); // TODO: Rework inCorrectMessages system.
                     continue;
                 }
             }
-
-            for(int j = quoteStartIndex + 1; j < messageLetters.length; j++) {
-                boolean isEndOfQuote = Arrays.asList(validQStarters).contains(String.valueOf(messageLetters[j]));
-                boolean isEndOfMessage = messageLetters.length <= j + 1;
-
-                if(isEndOfQuote && !isEndOfMessage) {
-                    if(messageLetters[j + 1] == '|' && messageLetters[j + 2] == '|') {
-                        quoteEndIndex = j + 3;
-                        break;
-                    } else {
-                        quoteEndIndex = j + 1;
-                        break;
-                    }
-                } else if (isEndOfQuote && isEndOfMessage) {
-                    System.out.println(message + " Has a quote end, but no source.");
-                }
-            }
-
-            if(quoteEndIndex == 0) { // If endofquote or start of source has not been found.
-                inCorrectMessages.add(i);
-                System.out.println(message + " Does not have a end of quote.");
-                continue;
-            }
-
-            for(int j = quoteEndIndex; j < messageLetters.length; j++) {
-                if (messageLetters[j] != ' ' && messageLetters[j] != '-') {
-                    sourceStartIndex = j;
-                    break;
-                }
-            }
-
-            if(sourceStartIndex == 0) { // If start of source has not been found.
-                inCorrectMessages.add(i);
-                System.out.println(message + " Does not have a source start.");
-                continue;
-            }
-
-            for(int j = sourceStartIndex; j < messageLetters.length; j++) {
-                if(messageLetters[j] == ' ') {
-                    sourceEndIndex = j;
-                    break;
-                }
-            }
-
-            if(sourceEndIndex == 0) { // In that case, there is no description.
-                sourceEndIndex = messageLetters.length;
-            }
-
-            String m = new String(Arrays.copyOfRange(messageLetters, 0, quoteEndIndex));
-            String s = new String(Arrays.copyOfRange(messageLetters, sourceStartIndex, sourceEndIndex));
-
-            if(sourceEndIndex != messageLetters.length) { // Because then there *is* a description.
-                descStartIndex = sourceEndIndex + 1;
-                String d =  new String(Arrays.copyOfRange(messageLetters, descStartIndex, messageLetters.length));
-
-                Quote q = new Quote(m, s, messageId, d.trim());
-                quotes.add(q);
-            } else {
-                Quote q = new Quote(m, s, messageId);
-                quotes.add(q);
-            }
+            quotes.addAll(convoQs);
         }
 
         return quotes;
