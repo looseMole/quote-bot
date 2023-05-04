@@ -8,7 +8,7 @@ This "game" has prompted a channel on our Discord server named "cool-quotes-by-u
 I wanted a command-driven bot which could process all of these quotes, and then make a game of them, in which the members of the server try to guess who was the original
 "author" of a certain quote.  
   
-The "Standard formula" for these quotes, are: `"<Quote>" - <Author> <[Optionally] a bit of context>`
+The "Standard formula" for these quotes, are: `[premeta] "<Quote" [midmeta] - <Name> [postmeta]` - the fields marked with square brackets ([]) being optional.
 
 **Initially proposed features**
 1. “Random quote”
@@ -29,6 +29,6 @@ Feature 1 ✅
 Feature 2 ✅  
 Feature 4 ✅  
 Feature 3 ✅  
-Problem 1.a   
-Problem 1.b  
+Problem 1.b ✅  
+Problem 1.a  
 Problem 2  
