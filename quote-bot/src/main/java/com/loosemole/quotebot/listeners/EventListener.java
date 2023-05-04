@@ -127,10 +127,20 @@ public class EventListener extends ListenerAdapter implements Serializable {
             case "guess" -> {  // TODO: Find a more creative way to reveal answer.
                 Quote randomQuote = this.getRandomQuote(guildId);
 
-                if(randomQuote.getDescription().equals("")) {
+                if(!randomQuote.hasMeta()) {
                     cChannel.sendMessage("Who said: " + randomQuote.getQuote() + "? Answer: ||"+randomQuote.getSource()+"||\"").queue();
-                } else /*(If The Quote has a desc, it can be treated as a hint)*/ {
-                    cChannel.sendMessage("Who said: " + randomQuote.getQuote() + "? Hint: ||" + randomQuote.getDescription() + "|| Answer: ||\""+randomQuote.getSource()+"\"||").queue();
+                } else /*(If The Quote has meta text, the meta can be treated as a hint)*/ {
+                    StringBuilder sb = new StringBuilder(randomQuote.getQuote());
+                    if(!randomQuote.getPreMeta().equals("")) {
+                        sb = new StringBuilder(randomQuote.getPreMeta())
+                                .append("||" + randomQuote.getQuote() + "||");
+                    } if (!randomQuote.getMidMeta().equals("")) {
+                        sb.append("||" + randomQuote.getMidMeta() + "||");
+                    } if (!randomQuote.getPostMeta().equals("")) {
+                        sb.append(" - <source> ")
+                                .append("||" + randomQuote.getPostMeta() + "||");
+                    }
+                    cChannel.sendMessage("Who said: " + sb.toString() + " Answer: ||\""+randomQuote.getSource()+"\"||").queue();
                 }
             }
             default -> cChannel.sendMessage("Unknown command: " + mContent); // TODO: Find out why this does not trigger.
