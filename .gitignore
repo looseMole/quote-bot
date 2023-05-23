@@ -2,3 +2,4 @@
 /quote-bot/*Quotes.txt
 .idea
 quote-bot/target
+quote-bot/out
