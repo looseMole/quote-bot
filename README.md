@@ -30,5 +30,5 @@ Feature 2 ✅
 Feature 4 ✅  
 Feature 3 ✅  
 Problem 1.b ✅  
-Problem 1.a  
-Problem 2  
+Problem 1.a ✅  
+Problem 2 ✅  
