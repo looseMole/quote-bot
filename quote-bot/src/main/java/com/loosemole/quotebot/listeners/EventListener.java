@@ -103,7 +103,15 @@ public class EventListener extends ListenerAdapter implements Serializable {
         String mContent = triggerMessage.getContentDisplay();
 
         if (!mContent.startsWith(prefix)) {
-            return; // TODO: In that case, if in the right channel, attempt to parse the message as a new quote.
+            if (!event.getChannel().getName().equals("cool-quotes-by-us")) {
+                return;
+            }
+            try {
+                this.quoteListMap.get(event.getGuild().getId()).addAll(this.identifyQuotes(event.getMessage()));
+            } catch (IncorrectQuoteFormatException | NoTextInMessageException e) {
+                System.out.println(event.getMessage().getContentDisplay() + " is not formatted correctly for a quote."); // TODO Handle incorrectly formatted quotes better.
+            }
+            return;
         }
 
         mContent = mContent.replaceFirst(prefix, "");  // Remove prefix.
@@ -264,13 +272,19 @@ public class EventListener extends ListenerAdapter implements Serializable {
                 inCorrectMessages.add(i);
                 continue;
             }
+
+            if(convoQs.isEmpty()) {
+                inCorrectMessages.add(i);
+                continue;
+            }
+
             quotes.addAll(convoQs);
         }
 
         return quotes;
     }
 
-    private LinkedList<Quote> identifyQuotes(Message inputMessage) throws NoTextInMessageException, IncorrectQuoteFormatException {
+    private ArrayList<Quote> identifyQuotes(Message inputMessage) throws NoTextInMessageException, IncorrectQuoteFormatException {
         String message = inputMessage.getContentDisplay();
         String messageId = inputMessage.getId();
 
@@ -281,7 +295,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
         String m; // Message
         String s; // Message source / quoted author
 
-        LinkedList<Quote> convoQs = new LinkedList<>();
+        ArrayList<Quote> convoQs = new ArrayList<>();
 
         Pattern pattern = Pattern.compile("^(?<premeta>.*?)(?:\\|?[\"'“](?<quote>.+)[\"'”]\\|?) ?(?: ?(?<midmeta>.*) ?(?=[-/]))?[-/]? ?(?<name>\\w+)[,]? ?(?<postmeta>.*)"); // Props to MidnightRocket for this RegEx work.
         Matcher matcher = pattern.matcher(message);
