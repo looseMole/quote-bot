@@ -146,8 +146,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
                     cChannel.sendMessage("Who said: " + sb + "? Answer: ||" + randomQuote.getSource() + "||").queue();
                 }
             }
-            default ->
-                    cChannel.sendMessage("Unknown command: " + mContent); // TODO: Find out why this does not trigger.
+            default -> cChannel.sendMessage("Unknown command: `" + mContent + "`").queue();
         }
     }
 
