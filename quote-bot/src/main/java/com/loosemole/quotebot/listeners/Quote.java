@@ -22,16 +22,18 @@ public class Quote implements Serializable {
 
     @Override
     public String toString() {
-        if(!this.hasMeta()) {
+        if (!this.hasMeta()) {
             return this.quote + " - " + this.source;
         } else { // If the quote has meta text, add it in the right order:
             StringBuilder sb = new StringBuilder(this.getQuote());
-            if(!this.getPreMeta().equals("")) {
+            if (!this.getPreMeta().equals("")) {
                 sb = new StringBuilder(this.getPreMeta())
                         .append(this.getQuote());
-            } if (!this.getMidMeta().equals("")) {
+            }
+            if (!this.getMidMeta().equals("")) {
                 sb.append(this.getMidMeta());
-            } if (!this.getPostMeta().equals("")) {
+            }
+            if (!this.getPostMeta().equals("")) {
                 sb.append(this.getPostMeta());
             }
             return sb.toString();

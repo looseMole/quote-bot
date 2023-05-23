@@ -33,26 +33,26 @@ public class EventListener extends ListenerAdapter implements Serializable {
         ArrayList<Quote> quotes;
 
         // Check if server has the correctly named channel to scrape from
-        for(GuildChannel ch : channelList) {
-            if(ch.getName().equals("cool-quotes-by-us")) { // The name of the channel to scrape for messages.
+        for (GuildChannel ch : channelList) {
+            if (ch.getName().equals("cool-quotes-by-us")) { // The name of the channel to scrape for messages.
                 quotesChannel = (TextChannel) ch;
                 break;
             }
         }
 
-        if(quotesChannel == null) {
+        if (quotesChannel == null) {
             System.out.println("Guild: " + guild.getName() + " had no appropriate Quote channel.");
             return;
         }
 
         quotes = this.load_quotes(guild);
 
-        if(quotes == null) {
+        if (quotes == null) {
             // Get all previously sent messages of the Quotes Channel
             quotes = this.get_all_sent_quotes(quotesChannel);
         } else {
             // Update list of quotes with the ones sent since last saved quote.
-            String latestQuoteId = quotes.get(quotes.size()-1).getMessageId();
+            String latestQuoteId = quotes.get(quotes.size() - 1).getMessageId();
             quotes.addAll(this.get_quotes_since(quotesChannel, latestQuoteId));
         }
 
@@ -62,12 +62,12 @@ public class EventListener extends ListenerAdapter implements Serializable {
         int amountOfQuotes = quotes.size();
         int updatedAmountOfQuotes = -1;
         int loopCounter = 0;
-        while(amountOfQuotes > 0 && (amountOfQuotes != updatedAmountOfQuotes && loopCounter < 30)) {
-            if(updatedAmountOfQuotes > amountOfQuotes) {
+        while (amountOfQuotes > 0 && (amountOfQuotes != updatedAmountOfQuotes && loopCounter < 30)) {
+            if (updatedAmountOfQuotes > amountOfQuotes) {
                 amountOfQuotes = updatedAmountOfQuotes;
             }
 
-            String latestQuoteId = quotes.get(quotes.size()-1).getMessageId();
+            String latestQuoteId = quotes.get(quotes.size() - 1).getMessageId();
             quotes.addAll(this.get_quotes_since(quotesChannel, latestQuoteId));
 
             updatedAmountOfQuotes = quotes.size();
@@ -101,7 +101,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
         Message triggerMessage = event.getMessage();
         String mContent = triggerMessage.getContentDisplay();
 
-        if(!mContent.startsWith(prefix)) {
+        if (!mContent.startsWith(prefix)) {
             return; // TODO: In that case, if in the right channel, attempt to parse the message as a new quote.
         }
 
@@ -111,13 +111,14 @@ public class EventListener extends ListenerAdapter implements Serializable {
         String guildId = event.getGuild().getId();
 
         // All valid commands are under here:
-        switch(mWords[0].toLowerCase()) {
-            case "stats" -> cChannel.sendMessage((this.quotesStats(guildId))).queue(); // Send stats to the events origin channel.
+        switch (mWords[0].toLowerCase()) {
+            case "stats" ->
+                    cChannel.sendMessage((this.quotesStats(guildId))).queue(); // Send stats to the events origin channel.
             case "random" -> {
-                if(mWords.length >= 2) {
+                if (mWords.length >= 2) {
                     try {
                         cChannel.sendMessage(this.getQuoteByName(guildId, mWords[1]).toString()).queue();
-                    } catch(NullPointerException e) {
+                    } catch (NullPointerException e) {
                         cChannel.sendMessage("No quotes attributed to \"" + mWords[1] + "\" found.").queue();
                     }
                 } else {
@@ -127,23 +128,26 @@ public class EventListener extends ListenerAdapter implements Serializable {
             case "guess" -> {  // TODO: Find a more creative way to reveal answer.
                 Quote randomQuote = this.getRandomQuote(guildId);
 
-                if(!randomQuote.hasMeta()) {
-                    cChannel.sendMessage("Who said: " + randomQuote.getQuote() + "? Answer: ||"+randomQuote.getSource()+"||").queue();
+                if (!randomQuote.hasMeta()) {
+                    cChannel.sendMessage("Who said: " + randomQuote.getQuote() + "? Answer: ||" + randomQuote.getSource() + "||").queue();
                 } else /*(If The Quote has meta text, the meta can be treated as a hint)*/ {
                     StringBuilder sb = new StringBuilder(randomQuote.getQuote());
-                    if(!randomQuote.getPreMeta().equals("")) {
+                    if (!randomQuote.getPreMeta().equals("")) {
                         sb = new StringBuilder(randomQuote.getPreMeta())
                                 .append("||" + randomQuote.getQuote() + "||");
-                    } if (!randomQuote.getMidMeta().equals("")) {
+                    }
+                    if (!randomQuote.getMidMeta().equals("")) {
                         sb.append("||" + randomQuote.getMidMeta() + "||");
-                    } if (!randomQuote.getPostMeta().equals("")) {
+                    }
+                    if (!randomQuote.getPostMeta().equals("")) {
                         sb.append(" - <source> ")
                                 .append("||" + randomQuote.getPostMeta() + "||");
                     }
-                    cChannel.sendMessage("Who said: " + sb + "? Answer: ||"+randomQuote.getSource()+"||").queue();
+                    cChannel.sendMessage("Who said: " + sb + "? Answer: ||" + randomQuote.getSource() + "||").queue();
                 }
             }
-            default -> cChannel.sendMessage("Unknown command: " + mContent); // TODO: Find out why this does not trigger.
+            default ->
+                    cChannel.sendMessage("Unknown command: " + mContent); // TODO: Find out why this does not trigger.
         }
     }
 
@@ -153,31 +157,31 @@ public class EventListener extends ListenerAdapter implements Serializable {
      */
     public Quote getRandomQuote(String guildId) {
         ArrayList<Quote> quotes = quoteListMap.get(guildId); // The quotes for this server.
-        int index = (int)(Math.random() * quotes.size()); // Random number between 0 and quotes-size.
+        int index = (int) (Math.random() * quotes.size()); // Random number between 0 and quotes-size.
         return quotes.get(index);
     }
 
     /*
-    * Runs through the ArrayList of quotes for the server, adding any quotes by an author with a matching name to a new
-    * temporary ArrayList. - Then performs the same operation as getRandomQuote on this, smaller list.
-    * As both the server-wide amount of quotes, and the amount of quotes associated with the same name can be very large,
-    * this is not optimally memory-efficient.
-    */
+     * Runs through the ArrayList of quotes for the server, adding any quotes by an author with a matching name to a new
+     * temporary ArrayList. - Then performs the same operation as getRandomQuote on this, smaller list.
+     * As both the server-wide amount of quotes, and the amount of quotes associated with the same name can be very large,
+     * this is not optimally memory-efficient.
+     */
     public Quote getQuoteByName(String guildId, String quoteAuthor) throws NullPointerException {
         ArrayList<Quote> quotes = quoteListMap.get(guildId); // The quotes for this server.
         ArrayList<Quote> namedQuotes = new ArrayList<>();
 
         // Compose list of all quotes attributed to the same person
-        for(Quote q : quotes) {
-            if(q.getSource().equals(quoteAuthor)) {
+        for (Quote q : quotes) {
+            if (q.getSource().equals(quoteAuthor)) {
                 namedQuotes.add(q);
             }
         }
-        if(namedQuotes.size() == 0) {
+        if (namedQuotes.size() == 0) {
             throw new NullPointerException();
         }
 
-        int index = (int)(Math.random() * namedQuotes.size()); // Random number between 0 and quotes-size.
+        int index = (int) (Math.random() * namedQuotes.size()); // Random number between 0 and quotes-size.
         return namedQuotes.get(index);
     }
 
@@ -187,11 +191,11 @@ public class EventListener extends ListenerAdapter implements Serializable {
         HashMap<String, Integer> authorMap = new HashMap<>();
 
         // Count how many quotes each saved "Source" has to their name.
-        statBuilder.append(quotes.size()+" quotes loaded.\n");
-        for(int i = 0; i < quotes.size(); i++) {
+        statBuilder.append(quotes.size() + " quotes loaded.\n");
+        for (int i = 0; i < quotes.size(); i++) {
             Quote q = quotes.get(i);
             String qAuthor = q.getSource();
-            if(!authorMap.containsKey(qAuthor)) {
+            if (!authorMap.containsKey(qAuthor)) {
                 authorMap.put(qAuthor, 1);
             } else {
                 authorMap.put(qAuthor, authorMap.get(qAuthor) + 1); // Increment the number related to the author.
@@ -199,14 +203,14 @@ public class EventListener extends ListenerAdapter implements Serializable {
         }
 
         // NGL: This sorting is stolen from StackOverflow
-        Map<String,Integer> sortedMap =
+        Map<String, Integer> sortedMap =
                 authorMap.entrySet().stream()
                         .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
                         .collect(Collectors.toMap(
                                 Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
 
         // Build stats-string.
-        for(String key : sortedMap.keySet()) {
+        for (String key : sortedMap.keySet()) {
             statBuilder.append(key + ": " + sortedMap.get(key) + " Quotes.\n");
         }
 
@@ -223,13 +227,13 @@ public class EventListener extends ListenerAdapter implements Serializable {
         ArrayList<Quote> quotes = new ArrayList<>();
         MessageHistory messageHistory;
 
-        if(latestMessageId == null) {
+        if (latestMessageId == null) {
             messageHistory = MessageHistory.getHistoryFromBeginning(quotesChannel).complete();
         } else {
             Message latestMessage;
             try {
                 latestMessage = quotesChannel.retrieveMessageById(latestMessageId).complete();
-            } catch(ErrorResponseException e) {
+            } catch (ErrorResponseException e) {
                 System.out.println("The latest saved quote has probably been deleted.");
                 return null; // TODO: Handle MessageNotFoundError more gracefully, potentially by trying with the next-oldest saved quote.
             }
@@ -241,7 +245,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
 
         // Reverse the sorting of the list.
         ArrayList<Message> messages = new ArrayList<>();
-        for(Message m : reverseMessages) {
+        for (Message m : reverseMessages) {
             messages.add(m);
         }
         Collections.reverse(messages);
@@ -250,13 +254,13 @@ public class EventListener extends ListenerAdapter implements Serializable {
         String message;
         ArrayList<Integer> inCorrectMessages = new ArrayList<>(); // TODO: Actually use inCorrectMessages for something.
 
-        for(int i = 0; i < messages.size(); i++) {
+        for (int i = 0; i < messages.size(); i++) {
             if (messages.get(i).getAuthor().isBot()) continue; // Bots are not quoteable.
 
             message = messages.get(i).getContentDisplay();
             String messageId = messages.get(i).getId();
 
-            if(message.isEmpty()) {
+            if (message.isEmpty()) {
                 continue;
             }
 
@@ -269,8 +273,8 @@ public class EventListener extends ListenerAdapter implements Serializable {
             Pattern pattern = Pattern.compile("^(?<premeta>.*?)(?:\\|?[\"'“](?<quote>.+)[\"'”]\\|?) ?(?: ?(?<midmeta>.*) ?(?=[-/]))?[-/]? ?(?<name>\\w+)[,]? ?(?<postmeta>.*)"); // Props to MidnightRocket for this RegEx work.
             Matcher matcher = pattern.matcher(message);
 
-            while(matcher.find()) {
-                if(!(matcher.group("quote") == null | matcher.group("quote").isEmpty() | matcher.group("name") == null | matcher.group("name").isEmpty())) {
+            while (matcher.find()) {
+                if (!(matcher.group("quote") == null | matcher.group("quote").isEmpty() | matcher.group("name") == null | matcher.group("name").isEmpty())) {
                     m = "\"" + matcher.group("quote") + "\"";
                     s = matcher.group("name").toLowerCase();
                     s = s.substring(0, 1).toUpperCase() + s.substring(1);
@@ -299,9 +303,9 @@ public class EventListener extends ListenerAdapter implements Serializable {
             System.out.println("Error while creating file: " + e);
         }
 
-        try (FileOutputStream fos = new FileOutputStream(f.getAbsolutePath())){
+        try (FileOutputStream fos = new FileOutputStream(f.getAbsolutePath())) {
 
-            try(ObjectOutputStream oos = new ObjectOutputStream(fos)) {
+            try (ObjectOutputStream oos = new ObjectOutputStream(fos)) {
                 oos.writeObject(quoteArray);
             }
         } catch (IOException e) {
@@ -316,7 +320,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
         Quote[] quoteArray;
         try {
             FileInputStream fis = new FileInputStream(guild.getId() + "Quotes.txt");
-            try(ObjectInputStream ois = new ObjectInputStream(fis)) {
+            try (ObjectInputStream ois = new ObjectInputStream(fis)) {
                 quoteArray = (Quote[]) ois.readObject();
             } catch (FileNotFoundException e) {
                 System.out.println("No previously saved quotes found.");

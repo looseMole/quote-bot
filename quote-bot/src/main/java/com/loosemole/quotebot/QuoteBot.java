@@ -14,7 +14,7 @@ public class QuoteBot {
         this.config = Dotenv.configure().load();
         String token = config.get("TOKEN");
 
-        JDA api = JDABuilder.createDefault(token).enableIntents(GatewayIntent.MESSAGE_CONTENT).addEventListeners(new EventListener()).build(); // Actually Run the bot.
+        JDA api = JDABuilder.createDefault(token).enableIntents(GatewayIntent.MESSAGE_CONTENT).addEventListeners(new EventListener()).build(); // Actually run the bot.
         api.getPresence().setActivity(Activity.listening("Interesting Quotes"));
     }
 
