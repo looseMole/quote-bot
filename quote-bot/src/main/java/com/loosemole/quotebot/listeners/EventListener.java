@@ -1,5 +1,7 @@
 package com.loosemole.quotebot.listeners;
 
+import com.loosemole.quotebot.exceptions.IncorrectQuoteFormatException;
+import com.loosemole.quotebot.exceptions.NoTextInMessageException;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageHistory;
@@ -16,7 +18,6 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -102,7 +103,15 @@ public class EventListener extends ListenerAdapter implements Serializable {
         String mContent = triggerMessage.getContentDisplay();
 
         if (!mContent.startsWith(prefix)) {
-            return; // TODO: In that case, if in the right channel, attempt to parse the message as a new quote.
+            if (!event.getChannel().getName().equals("cool-quotes-by-us")) {
+                return;
+            }
+            try {
+                this.quoteListMap.get(event.getGuild().getId()).addAll(this.identifyQuotes(event.getMessage()));
+            } catch (IncorrectQuoteFormatException | NoTextInMessageException e) {
+                System.out.println(event.getMessage().getContentDisplay() + " is not formatted correctly for a quote."); // TODO Handle incorrectly formatted quotes better.
+            }
+            return;
         }
 
         mContent = mContent.replaceFirst(prefix, "");  // Remove prefix.
@@ -250,43 +259,58 @@ public class EventListener extends ListenerAdapter implements Serializable {
         Collections.reverse(messages);
 
         // Identify "Correctly formatted messages"
-        String message;
-        ArrayList<Integer> inCorrectMessages = new ArrayList<>(); // TODO: Actually use inCorrectMessages for something.
+        LinkedList<Integer> inCorrectMessages = new LinkedList<>(); // TODO: Actually use inCorrectMessages for something.
 
         for (int i = 0; i < messages.size(); i++) {
             if (messages.get(i).getAuthor().isBot()) continue; // Bots are not quoteable.
 
-            message = messages.get(i).getContentDisplay();
-            String messageId = messages.get(i).getId();
+            LinkedList<Quote> convoQs;
 
-            if (message.isEmpty()) {
+            try {
+                convoQs = new LinkedList<>(this.identifyQuotes(messages.get(i)));
+            } catch (NoTextInMessageException | IncorrectQuoteFormatException e) {
+                inCorrectMessages.add(i);
                 continue;
             }
 
-            Quote q;
-            String m; // Message
-            String s; // Message source / quoted author
-
-            LinkedList<Quote> convoQs = new LinkedList<>();
-
-            Pattern pattern = Pattern.compile("^(?<premeta>.*?)(?:\\|?[\"'“](?<quote>.+)[\"'”]\\|?) ?(?: ?(?<midmeta>.*) ?(?=[-/]))?[-/]? ?(?<name>\\w+)[,]? ?(?<postmeta>.*)"); // Props to MidnightRocket for this RegEx work.
-            Matcher matcher = pattern.matcher(message);
-
-            while (matcher.find()) {
-                if (!(matcher.group("quote") == null | matcher.group("quote").isEmpty() | matcher.group("name") == null | matcher.group("name").isEmpty())) {
-                    m = "\"" + matcher.group("quote") + "\"";
-                    s = matcher.group("name").toLowerCase();
-                    s = s.substring(0, 1).toUpperCase() + s.substring(1);
-                    convoQs.add(new Quote(m, s, messageId));
-                } else {
-                    inCorrectMessages.add(i); // TODO: Rework inCorrectMessages system.
-                    continue;
-                }
+            if(convoQs.isEmpty()) {
+                inCorrectMessages.add(i);
+                continue;
             }
+
             quotes.addAll(convoQs);
         }
 
         return quotes;
+    }
+
+    private ArrayList<Quote> identifyQuotes(Message inputMessage) throws NoTextInMessageException, IncorrectQuoteFormatException {
+        String message = inputMessage.getContentDisplay();
+        String messageId = inputMessage.getId();
+
+        if (message.isEmpty()) {
+            throw new NoTextInMessageException();
+        }
+
+        String m; // Message
+        String s; // Message source / quoted author
+
+        ArrayList<Quote> convoQs = new ArrayList<>();
+
+        Pattern pattern = Pattern.compile("^(?<premeta>.*?)(?:\\|?[\"'“](?<quote>.+)[\"'”]\\|?) ?(?: ?(?<midmeta>.*) ?(?=[-/]))?[-/]? ?(?<name>\\w+)[,]? ?(?<postmeta>.*)"); // Props to MidnightRocket for this RegEx work.
+        Matcher matcher = pattern.matcher(message);
+
+        while (matcher.find()) {
+            if (!(matcher.group("quote") == null | matcher.group("quote").isEmpty() | matcher.group("name") == null | matcher.group("name").isEmpty())) {
+                m = "\"" + matcher.group("quote") + "\"";
+                s = matcher.group("name").toLowerCase();
+                s = s.substring(0, 1).toUpperCase() + s.substring(1);
+                convoQs.add(new Quote(m, s, messageId));
+            } else {
+                throw new IncorrectQuoteFormatException();
+            }
+        }
+        return convoQs;
     }
 
     private boolean save_quotes(Guild guild, ArrayList<Quote> quotes) {
