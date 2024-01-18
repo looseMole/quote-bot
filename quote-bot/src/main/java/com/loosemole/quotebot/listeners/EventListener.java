@@ -74,7 +74,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
             updatedAmountOfQuotes = quotes.size();
             loopCounter++;
 
-            System.out.println("get_quotes_since has been called for " + guild.getName() + ", " + loopCounter + "times during this startup...");
+            System.out.println("get_quotes_since has been called for " + guild.getName() + ", " + loopCounter + " times during this startup...");
         }
 
         this.quoteListMap.put(guild.getId(), quotes);
@@ -273,7 +273,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
                 continue;
             }
 
-            if(convoQs.isEmpty()) {
+            if (convoQs.isEmpty()) {
                 inCorrectMessages.add(i);
                 continue;
             }
