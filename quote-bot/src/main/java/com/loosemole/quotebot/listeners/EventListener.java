@@ -198,10 +198,11 @@ public class EventListener extends ListenerAdapter implements Serializable {
 
                 // TODO: Insert into database here.
                 try {
-                    PreparedStatement insertStatement = conn.prepareStatement("INSERT INTO reminder (time, text, org_msg_id) VALUES(?,?, ?)");
+                    PreparedStatement insertStatement = conn.prepareStatement("INSERT INTO reminder (time, text, org_msg_id, user_to_remind) VALUES(?,?,?,?)");
                     insertStatement.setTimestamp(1, plannedTime);
                     insertStatement.setString(2, referencedMessage.getContentDisplay());
                     insertStatement.setString(3, referencedMessage.getId());
+                    insertStatement.setString(4, triggerMessage.getAuthor().getId());
 
                     insertStatement.execute();
                 } catch (SQLException e) {
