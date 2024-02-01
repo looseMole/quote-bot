@@ -24,18 +24,22 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import io.github.cdimascio.dotenv.Dotenv;
+
 public class EventListener extends ListenerAdapter implements Serializable {
     private HashMap<String, ArrayList<Quote>> quoteListMap = new HashMap<>(); // Storing all currently loaded quote-lists w. Guild ID as key.
     private Connection conn;
+    private final Dotenv config;
 
     public EventListener() {
         // Create connection to DB
+        this.config = Dotenv.configure().load();
         try {
             DriverManager.registerDriver(new org.postgresql.Driver());
             conn = DriverManager.getConnection(
-                    "jdbc:postgresql://localhost:5432/quotebot",
-                    "postgres",
-                    "password");
+                    config.get("SQL_CONNECTION_URL"),
+                    config.get("SQL_USERNAME"),
+                    config.get("SQL_PASSWORD"));
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -176,7 +180,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
 
                 // TODO: Create time-management system for checking when there is a given reminder due.
                 String errorMessage = "Unknown date: `" + mContent + "` try again, with a `yyyy-mm-dd hh:mm` format.";
-                if(mWords.length <= 2) { // Check size of message.
+                if (mWords.length <= 2) { // Check size of message.
                     cChannel.sendMessage(errorMessage).queue();
 //                    System.out.println("Message too short.");
                     return;
