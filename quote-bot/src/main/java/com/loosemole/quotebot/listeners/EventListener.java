@@ -7,6 +7,7 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageHistory;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
+import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.events.guild.GuildReadyEvent;
 import net.dv8tion.jda.api.events.message.MessageDeleteEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
@@ -17,6 +18,7 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.*;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -24,6 +26,20 @@ import java.util.stream.Collectors;
 
 public class EventListener extends ListenerAdapter implements Serializable {
     private HashMap<String, ArrayList<Quote>> quoteListMap = new HashMap<>(); // Storing all currently loaded quote-lists w. Guild ID as key.
+    private Connection conn;
+
+    public EventListener() {
+        // Create connection to DB
+        try {
+            DriverManager.registerDriver(new org.postgresql.Driver());
+            conn = DriverManager.getConnection(
+                    "jdbc:postgresql://localhost:5432/quotebot",
+                    "postgres",
+                    "password");
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     // When ready on a particular server.
     @Override
@@ -154,6 +170,42 @@ public class EventListener extends ListenerAdapter implements Serializable {
                     }
                     cChannel.sendMessage("Who said: " + sb + "? Answer: ||" + randomQuote.getSource() + "||").queue();
                 }
+            }
+            case "remindme" -> {
+                cChannel.sendMessage("Unknown command: `" + mContent + "`").queue();
+
+                // TODO: Create time-management system for checking when there is a given reminder due.
+                String errorMessage = "Unknown date: `" + mContent + "` try again, with a `yyyy-mm-dd hh:mm` format.";
+                if(mWords.length <= 2) { // Check size of message.
+                    cChannel.sendMessage(errorMessage).queue();
+//                    System.out.println("Message too short.");
+                    return;
+                }
+
+                Timestamp plannedTime;
+                try { // Check if the date is valid.
+                    plannedTime = Timestamp.valueOf(mWords[1] + " " + mWords[2] + ":00");
+                } catch (IllegalArgumentException e) {
+                    cChannel.sendMessage(errorMessage).queue();
+                    return;
+                }
+
+                Message referencedMessage = triggerMessage.getMessageReference().resolve().complete();
+
+                // TODO: Insert into database here.
+                try {
+                    PreparedStatement insertStatement = conn.prepareStatement("INSERT INTO reminder (time, text, org_msg_id) VALUES(?,?, ?)");
+                    insertStatement.setTimestamp(1, plannedTime);
+                    insertStatement.setString(2, referencedMessage.getContentDisplay());
+                    insertStatement.setString(3, referencedMessage.getId());
+
+                    insertStatement.execute();
+                } catch (SQLException e) {
+                    System.out.println(e);
+                }
+
+                System.out.println(plannedTime);
+                cChannel.addReactionById(triggerMessage.getId(), Emoji.fromUnicode("U+1F44D")).queue(); // Confirm interaction.
             }
             default -> cChannel.sendMessage("Unknown command: `" + mContent + "`").queue();
         }
