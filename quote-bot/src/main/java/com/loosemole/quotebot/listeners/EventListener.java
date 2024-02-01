@@ -176,7 +176,7 @@ public class EventListener extends ListenerAdapter implements Serializable {
                 }
             }
             case "remindme" -> {
-                cChannel.sendMessage("Unknown command: `" + mContent + "`").queue();
+                cChannel.sendMessage("The functionality for: `" + mContent + "` is not quite done yet.").queue();
 
                 // TODO: Create time-management system for checking when there is a given reminder due.
                 String errorMessage = "Unknown date: `" + mContent + "` try again, with a `yyyy-mm-dd hh:mm` format.";
