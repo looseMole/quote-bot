@@ -18,6 +18,7 @@ import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
 import java.io.*;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.*;
@@ -392,6 +393,8 @@ public class EventListener extends ListenerAdapter implements Serializable {
         // Should do nothing if file already exists.
         try {
             Files.createFile(Path.of(f.toURI()));
+        } catch (FileAlreadyExistsException ignored) {
+
         } catch (IOException e) {
             System.out.println("Error while creating file: " + e);
         }
