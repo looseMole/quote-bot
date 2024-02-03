@@ -2,6 +2,7 @@ package com.loosemole.quotebot.listeners;
 
 import com.loosemole.quotebot.exceptions.IncorrectQuoteFormatException;
 import com.loosemole.quotebot.exceptions.NoTextInMessageException;
+import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageHistory;
@@ -12,6 +13,7 @@ import net.dv8tion.jda.api.events.guild.GuildReadyEvent;
 import net.dv8tion.jda.api.events.message.MessageDeleteEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.MessageUpdateEvent;
+import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
@@ -20,6 +22,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.*;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -43,6 +48,17 @@ public class EventListener extends ListenerAdapter implements Serializable {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public void onReady(ReadyEvent event) {
+        JDA api = event.getJDA();
+
+        // Create a scheduled executor service with a single thread
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+
+        // Schedule the task to run every minute
+        scheduler.scheduleAtFixedRate(this.sendReminders(api), 0, 1, TimeUnit.MINUTES);
     }
 
     // When ready on a particular server.
@@ -176,13 +192,9 @@ public class EventListener extends ListenerAdapter implements Serializable {
                 }
             }
             case "remindme" -> {
-                cChannel.sendMessage("The functionality for: `" + mContent + "` is not quite done yet.").queue();
-
-                // TODO: Create time-management system for checking when there is a given reminder due.
                 String errorMessage = "Unknown date: `" + mContent + "` try again, with a `yyyy-mm-dd hh:mm` format.";
                 if (mWords.length <= 2) { // Check size of message.
                     cChannel.sendMessage(errorMessage).queue();
-//                    System.out.println("Message too short.");
                     return;
                 }
 
@@ -196,7 +208,6 @@ public class EventListener extends ListenerAdapter implements Serializable {
 
                 Message referencedMessage = triggerMessage.getMessageReference().resolve().complete();
 
-                // TODO: Insert into database here.
                 try {
                     PreparedStatement insertStatement = conn.prepareStatement("INSERT INTO reminder (time, text, org_msg_id, user_to_remind) VALUES(?,?,?,?)");
                     insertStatement.setTimestamp(1, plannedTime);
@@ -211,6 +222,8 @@ public class EventListener extends ListenerAdapter implements Serializable {
 
                 System.out.println(plannedTime);
                 cChannel.addReactionById(triggerMessage.getId(), Emoji.fromUnicode("U+1F44D")).queue(); // Confirm interaction.
+
+                triggerMessage.getChannelId();
             }
             default -> cChannel.sendMessage("Unknown command: `" + mContent + "`").queue();
         }
@@ -416,5 +429,14 @@ public class EventListener extends ListenerAdapter implements Serializable {
 
         quotes = new ArrayList<>(List.of(quoteArray));
         return quotes;
+    }
+
+    /*
+     * This method is called every minute, and sends reminders to users who have reminders due. NB: If a lot of
+     * reminders are being created, (so many, that they cannot be handled before a new Runnable is created - within a
+     * minute) the runnable might queue the same reminders in multiple threads at once.
+     */
+    private Runnable sendReminders(JDA api) {
+        return new RunnableReminder(api, conn);
     }
 }
